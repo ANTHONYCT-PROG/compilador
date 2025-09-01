@@ -1,0 +1,77 @@
+const fs = require('fs');
+
+// Leer el archivo de entrada
+const inputFile = process.argv[2];
+if (!inputFile) {
+    console.error('Uso: node compilador.js <archivo.dsl>');
+    process.exit(1);
+}
+
+const data = fs.readFileSync(inputFile, 'utf8');
+const lines = data.split('\n');
+
+let jsCode = `
+const canvas = document.getElementById('myCanvas');
+const ctx = canvas.getContext('2d');
+let y = 10;
+`;
+
+lines.forEach(line => {
+    line = line.trim();
+    if (line === '') return;
+
+    const match = line.match(/(\w+)\((\d+)\)/);
+    if (!match) {
+        console.error('Línea no válida: ' + line);
+        return;
+    }
+
+    const command = match[1];
+    const size = parseInt(match[2]);
+
+    switch (command) {
+        case 'cuadrado':
+            jsCode += `
+// Dibujar cuadrado de lado ${size}
+ctx.beginPath();
+ctx.rect(10, y, ${size}, ${size});
+ctx.stroke();
+y += ${size} + 10;
+`;
+            break;
+        case 'triangulo':
+            const height = size * Math.sqrt(3) / 2;
+            jsCode += `
+// Dibujar triángulo equilátero de lado ${size}
+ctx.beginPath();
+ctx.moveTo(10, y);
+ctx.lineTo(10 + ${size}, y);
+ctx.lineTo(10 + ${size}/2, y + ${height});
+ctx.closePath();
+ctx.stroke();
+y += ${height} + 10;
+`;
+            break;
+        default:
+            console.error('Comando no reconocido: ' + command);
+    }
+});
+
+const htmlOutput = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dibujos</title>
+</head>
+<body>
+    <canvas id="myCanvas" width="800" height="600"></canvas>
+    <script>
+        ${jsCode}
+    </script>
+</body>
+</html>
+`;
+
+const outputFile = inputFile.replace('.dsl', '.html') || 'output.html';
+fs.writeFileSync(outputFile, htmlOutput);
+console.log('Compilación completada. Archivo ' + outputFile + ' generado.');
